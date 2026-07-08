@@ -1,75 +1,83 @@
 package my;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class JSONParser {
 
-    public <T> String parse(T object) {
+    private static Map<Class<?>, Field[]> classMap = new HashMap<>();
+
+    public <T> String parse(T object) throws IllegalAccessException {
         if (object == null) {
-            return "null";
+            return parseNull(object);
         }
         if (object instanceof String) {
-            return "\"" + object.toString() + "\"";
+            return parseString(object);
         }
         if (object instanceof Number) {
-            return object.toString();
+            return parseInteger(object);
         }
-        return parseObject(object);
+        if (object instanceof JsonObject) {
+            return parseToJson((JsonObject) object);
+        }
+        return parse(extractJsonObject(object));
     }
 
-    public String parseObject(Object object) {
-        Class<?> clazz = object.getClass();
-        Field[] fields = clazz.getDeclaredFields();
+    public String parseToJson(JsonObject jsonObject) {
+        StringBuilder json = new StringBuilder();
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("{");
+        List<JsonField> fields = jsonObject.getFields();
+        int size = fields.size();
 
+        json.append("{");
         int count = 0;
-        int size = fields.length;
-        for (Field field : fields) {
-            String attribute = field.getName();
-            String value = parse(getFieldValueWithoutChangingAccessModifier(field, object));
-
-            sb.append("\"").append(attribute).append("\":").append(value);
-
+        for (JsonField field : fields) {
+            json.append("\"").append(field.getField()).append("\"");
+            json.append(":");
+            json.append(field.getValue());
             if (count < size - 1) {
-                sb.append(",");
+                json.append(",");
             }
-
             count++;
         }
-        sb.append("}");
+        json.append("}");
 
-        return sb.toString();
+        return json.toString();
     }
 
-    private Object getFieldValueWithoutChangingAccessModifier(Field field, Object object) {
-        Object value = null;
-        try {
-            if (Modifier.isPublic(field.getModifiers())) {
-                value = field.get(object);
-            } else {
-                field.setAccessible(true);
-                value = field.get(object);
-                field.setAccessible(false);
+    public JsonObject extractJsonObject(Object object) throws IllegalAccessException {
+        JsonObject jsonObject = new JsonObject();
+
+        Class<?> clazz = object.getClass();
+        classMap.computeIfAbsent(clazz, objectClass -> objectClass.getDeclaredFields());
+        Field[] fields = classMap.get(clazz);
+
+        for (Field field : fields) {
+            String fieldValue = "null";
+            if (field.trySetAccessible()) {
+                fieldValue = parse(field.get(object));
             }
-        } catch (Exception e) {
-            System.out.println("Value extraction error");
-            System.out.println(e.getStackTrace());
+            jsonObject.putField(field.getName(), fieldValue);
         }
-        return value;
+
+        return jsonObject;
     }
 
-    private void pastTextWithIndent(int indentSize, String text, StringBuilder sb) {
-        String[] parts = text.split("\n");
+    public String parseString(Object object) {
+        return "\"" + object.toString() + "\"";
+    }
 
-        sb.append(parts[0]);
-        for (int index = 1; index < parts.length; index++) {
-            for (int i = 0; i < indentSize; i++) {
-                sb.append(" ");
-            }
-            sb.append(parts[index]);
-        }
+    public String parseNull(Object object) {
+        return "NULL";
+    }
+
+    public String parseInteger(Object object) {
+        return object.toString();
+    }
+
+    public static Map<Class<?>, Field[]> getHashedClass() {
+        return classMap;
     }
 }
