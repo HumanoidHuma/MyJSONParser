@@ -8,4 +8,8 @@ public interface Formatter {
     JsonFieldFormatter getFieldFormatter();
 
     JsonObjectFormatter getObjectFormatter();
+
+    void setFieldFormatter(JsonFieldFormatter fieldFormatter);
+
+    void setObjectFormatter(JsonObjectFormatter objectFormatter);
 }

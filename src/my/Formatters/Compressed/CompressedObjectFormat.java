@@ -34,4 +34,9 @@ public class CompressedObjectFormat implements JsonObjectFormatter {
 
         return sb.toString();
     }
+
+    @Override
+    public void setFormatter(Formatter formatter) {
+        this.formatter = formatter;
+    }
 }

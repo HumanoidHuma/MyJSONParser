@@ -7,6 +7,19 @@ import my.FormattersInterface.JsonFieldFormatter;
 import my.FormattersInterface.JsonObjectFormatter;
 
 public class CompressedFormat implements Formatter {
+    private JsonFieldFormatter fieldFormatter;
+    private JsonObjectFormatter objectFormatter;
+
+    public CompressedFormat(JsonFieldFormatter fieldFormatter, JsonObjectFormatter objectFormatter) {
+        this.fieldFormatter = fieldFormatter;
+        this.objectFormatter = objectFormatter;
+    }
+
+    public CompressedFormat() {
+        this.fieldFormatter = new CompressedFieldFormat(this);
+        this.objectFormatter = new CompressedObjectFormat(this);
+    }
+
     @Override
     public String formate(JsonValue object) {
         if (object instanceof JsonNull) {
@@ -18,47 +31,30 @@ public class CompressedFormat implements Formatter {
         if (object instanceof JsonNumber) {
             return parseNumber((JsonNumber) object);
         }
-        return parseObject((JsonObject) object);
+        if (object instanceof JsonField) {
+            return fieldFormatter.formate((JsonField) object);
+        }
+        return objectFormatter.formate((JsonObject) object);
     }
 
     @Override
     public JsonFieldFormatter getFieldFormatter() {
-        return new JsonFieldFormatter() {
-            @Override
-            public String formate(JsonField field) {
-                return "";
-            }
-        };
+        return fieldFormatter;
     }
 
     @Override
     public JsonObjectFormatter getObjectFormatter() {
-        return new JsonObjectFormatter() {
-            @Override
-            public String formate(JsonObject object) {
-                return "";
-            }
-        };
+        return objectFormatter;
     }
 
+    @Override
+    public void setFieldFormatter(JsonFieldFormatter fieldFormatter) {
+        this.fieldFormatter = fieldFormatter;
+    }
 
-    public String parseObject(JsonObject object) {
-        StringBuilder json = new StringBuilder();
-
-        json.append("{");
-        int count = 0;
-        int size = object.getFieldsCount();
-        for (JsonField field : object.getFieldsSet()) {
-            String parsedField = formate(field.getField());
-            String parsedValue = formate(field.getValue());
-            json.append(parsedField).append(":").append(parsedValue);
-            if (count < size - 1) {
-                json.append(",");
-            }
-            count++;
-        }
-        json.append("}");
-        return json.toString();
+    @Override
+    public void setObjectFormatter(JsonObjectFormatter objectFormatter) {
+        this.objectFormatter = objectFormatter;
     }
 
     public String parseString(JsonString object) {
@@ -68,4 +64,5 @@ public class CompressedFormat implements Formatter {
     public String parseNumber(JsonNumber object) {
         return object.toString();
     }
+
 }

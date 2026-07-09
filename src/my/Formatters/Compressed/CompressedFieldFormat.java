@@ -15,4 +15,9 @@ public class CompressedFieldFormat implements JsonFieldFormatter {
     public String formate(JsonField field) {
         return formatter.formate(field.getField()) + ":" + formatter.formate(field.getValue());
     }
+
+    @Override
+    public void setFormatter(Formatter formatter) {
+        this.formatter = formatter;
+    }
 }
