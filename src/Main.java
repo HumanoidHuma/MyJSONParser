@@ -1,7 +1,9 @@
 import my.JSONParser;
 
 import java.lang.reflect.Field;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 public class Main {
     public static void main(String[] args) throws IllegalAccessException {
@@ -30,9 +32,9 @@ public class Main {
         System.out.println(parsedJson);
 
         System.out.println();
-        Map<Class<?>, Field[]> hashedClass = JSONParser.getHashedClass();
-        for (Map.Entry<Class<?>, Field[]> entry : hashedClass.entrySet()) {
-            System.out.println(entry.getKey().getName());
+        Set<Class<?>> hashedClass = JSONParser.getHashedClass();
+        for (Class<?> clazz : hashedClass) {
+            System.out.println(clazz);
         }
     }
 }

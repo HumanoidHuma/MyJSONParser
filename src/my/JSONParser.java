@@ -1,83 +1,83 @@
 package my;
 
+import my.Entities.*;
+import my.Entities.EntitiesInterface.*;
+import my.Formatters.Compressed.CompressedFormat;
+import my.FormattersInterface.Formatter;
+
 import java.lang.reflect.Field;
-import java.util.HashMap;
-import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class JSONParser {
+    public static Map<Class<?>, Field[]> hashedClasses = new LinkedHashMap<>();
 
-    private static Map<Class<?>, Field[]> classMap = new HashMap<>();
+    private Formatter formatter = new CompressedFormat();
 
-    public <T> String parse(T object) throws IllegalAccessException {
+    public <T> String parse(T object) {
+        JsonValue jsonObject = parseToJsonObject(object);
+        return formatter.formate(jsonObject);
+    }
+
+    public <T> JsonValue parseToJsonObject(T object) {
         if (object == null) {
-            return parseNull(object);
+            return JsonNull.getInstance();
         }
         if (object instanceof String) {
-            return parseString(object);
+            return parseString((String) object);
         }
         if (object instanceof Number) {
-            return parseInteger(object);
+            return parseNumber((Number) object);
         }
-        if (object instanceof JsonObject) {
-            return parseToJson((JsonObject) object);
+        if (object instanceof JsonValue) {
+            return (JsonValue) object;
         }
-        return parse(extractJsonObject(object));
+        return extractJsonObject(object);
     }
 
-    public String parseToJson(JsonObject jsonObject) {
-        StringBuilder json = new StringBuilder();
-
-        List<JsonField> fields = jsonObject.getFields();
-        int size = fields.size();
-
-        json.append("{");
-        int count = 0;
-        for (JsonField field : fields) {
-            json.append("\"").append(field.getField()).append("\"");
-            json.append(":");
-            json.append(field.getValue());
-            if (count < size - 1) {
-                json.append(",");
-            }
-            count++;
-        }
-        json.append("}");
-
-        return json.toString();
-    }
-
-    public JsonObject extractJsonObject(Object object) throws IllegalAccessException {
-        JsonObject jsonObject = new JsonObject();
-
+    public JsonObject extractJsonObject(Object object) {
         Class<?> clazz = object.getClass();
-        classMap.computeIfAbsent(clazz, objectClass -> objectClass.getDeclaredFields());
-        Field[] fields = classMap.get(clazz);
+        if (!JSONParser.hashedClasses.containsKey(clazz)) {
+            hashClass(clazz);
+        }
+        Field[] fields = hashedClasses.get(clazz);
 
-        for (Field field : fields) {
-            String fieldValue = "null";
-            if (field.trySetAccessible()) {
-                fieldValue = parse(field.get(object));
+        JsonObject json = new JsonObject();
+
+        try {
+            for (Field field : fields) {
+                JsonString jsonFieldKey = (JsonString) parseToJsonObject(field.getName());
+                JsonValue jsonValue = parseToJsonObject(field.get(object));
+
+                JsonField jsonField = new JsonField(jsonFieldKey, jsonValue);
+                json.addField(jsonField);
             }
-            jsonObject.putField(field.getName(), fieldValue);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException("Field can not be parsed to Json Object");
         }
 
-        return jsonObject;
+        return json;
     }
 
-    public String parseString(Object object) {
-        return "\"" + object.toString() + "\"";
+    public JsonString parseString(String object) {
+        return new JsonString(object);
     }
 
-    public String parseNull(Object object) {
-        return "NULL";
+    public JsonNumber parseNumber(Number object) {
+        return new JsonNumber(object);
     }
 
-    public String parseInteger(Object object) {
-        return object.toString();
+    private Field[] hashClass(Class<?> clazz) {
+        Field[] fields = clazz.getDeclaredFields();
+        for (Field field : fields) {
+            field.trySetAccessible();
+        }
+        hashedClasses.put(clazz, fields);
+        return fields;
     }
 
-    public static Map<Class<?>, Field[]> getHashedClass() {
-        return classMap;
+    public static Set<Class<?>> getHashedClass() {
+        return hashedClasses.keySet();
     }
 }
