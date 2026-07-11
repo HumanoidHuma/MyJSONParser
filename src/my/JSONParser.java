@@ -11,11 +11,11 @@ import java.util.Map;
 import java.util.Set;
 
 public class JSONParser {
-    public static Map<Class<?>, Field[]> hashedClasses = new LinkedHashMap<>();
+    private static final Map<Class<?>, Field[]> hashedClasses = new LinkedHashMap<>();
 
     private Formatter formatter = new CompressedFormat();
 
-    public <T> String parse(T object) {
+    public <T> String serialize(T object) {
         JsonValue jsonObject = parseToJsonObject(object);
         return formatter.formate(jsonObject);
     }
